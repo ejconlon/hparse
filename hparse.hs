@@ -1,5 +1,6 @@
 #!/usr/bin/env runhaskell
-{-- Stuff --}
+
+{-# LANGUAGE MultiParamTypeClasses #-}
 
 import Test.Hspec.Monadic
 import Test.Hspec.QuickCheck
@@ -8,6 +9,11 @@ import Test.QuickCheck
 import Test.HUnit
 
 main = hspec mySpecs
+
+class Case a where
+  runCase :: a -> Bool
+  runCases :: [a] -> Bool
+  runCases cs = all id $ map runCase cs
 
 tokenize :: String -> [String]
 tokenize s = reverse $ go s Nothing []
@@ -38,34 +44,40 @@ tokenize s = reverse $ go s Nothing []
                        | otherwise =  go s (Just $ optAppendC c mt) ts
         go [] mt ts = optAppendS mt ts
 
-type TokenizeCase = (String, [String])
+data TokenizeCase = TokenizeCase (String, [String])
 
-tcaseList :: [TokenizeCase]
-tcaseList = [ ("()", ["(", ")"])
+instance Case (TokenizeCase) where
+  runCase (TokenizeCase (c, rs)) = (tokenize c) == rs
+
+tokenizeCases :: [TokenizeCase]
+tokenizeCases = map TokenizeCase [ ("()", ["(", ")"])
             , ("(a b c)", ["(", "a", "b", "c", ")"])
             , ("(a \tb)", ["(", "a", "b", ")"])
             , ("( )(\n) ()", ["(", ")", "(", ")", "(", ")"])
             ]
 
-tcaseRunner :: TokenizeCase -> Bool
-tcaseRunner (c, rs) = tokenize c == rs
-
-tcaseListRunner :: [TokenizeCase] -> Bool
-tcaseListRunner tcl = all id $ map tcaseRunner tcl
-
-hasBalancedParens :: [String] -> Bool
-hasBalancedParens [] = False
-hasBalancedParens (t:ts) = (t == "(") and (go 1 ts)
-  where go c (t:ts) | t == "(" = go (c+1) ts
-                    | t == ")" = go (c-1) ts
+isBalanced :: [String] -> Bool
+isBalanced [] = False
+isBalanced (t:ts) = (t == "(") && (go 1 ts)
+  where go c (t:ts) | (t == "(") = go (c+1) ts
+                    | (t == ")") = go (c-1) ts
                     | otherwise = go c ts
         go 0 [] = True
         go _ _ = False
 
+data IsBalancedCase = IsBalancedCase ([String], Bool)
 
+instance Case (IsBalancedCase) where
+  runCase (IsBalancedCase (ts, r)) = (isBalanced ts) == r
 
-
-
+isBalancedCases :: [IsBalancedCase]
+isBalancedCases = map IsBalancedCase [ (tokenize "()", True)
+              , (tokenize "(()())", True)
+              , (tokenize "(()", False)
+              , (tokenize ")", False)
+              ]
 
 mySpecs = describe "stuff" $ do
-  it "tokenizes" $ tcaseListRunner tcaseList
+  it "tokenize" $ runCases tokenizeCases
+  it "isBalanced" $ runCases isBalancedCases
+
