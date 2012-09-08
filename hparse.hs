@@ -53,6 +53,19 @@ tcaseRunner (c, rs) = tokenize c == rs
 tcaseListRunner :: [TokenizeCase] -> Bool
 tcaseListRunner tcl = all id $ map tcaseRunner tcl
 
+hasBalancedParens :: [String] -> Bool
+hasBalancedParens [] = False
+hasBalancedParens (t:ts) = (t == "(") and (go 1 ts)
+  where go c (t:ts) | t == "(" = go (c+1) ts
+                    | t == ")" = go (c-1) ts
+                    | otherwise = go c ts
+        go 0 [] = True
+        go _ _ = False
+
+
+
+
+
+
 mySpecs = describe "stuff" $ do
-  it "tokenizes" $
-     tcaseListRunner tcaseList
+  it "tokenizes" $ tcaseListRunner tcaseList
