@@ -2,7 +2,8 @@
 
 module HParse where
 
-import Data.List
+import qualified Data.Foldable
+import qualified Data.List
 
 -- Miscellaneous helpers
 
@@ -81,18 +82,31 @@ instance Functor Tree where
   fmap f (Leaf x) = Leaf $ f x
   fmap f (Branch xs) = Branch $ map (fmap f) xs
 
+instance Data.Foldable.Foldable Tree where
+  foldr f z (Leaf x) = f x z
+  foldr f z (Branch xs) = go f z (reverse xs)
+    where
+      go :: (a -> b -> b) -> b -> [Tree a] -> b
+      go f z [] = z
+      go f z (mt:mts) = go f (Data.Foldable.foldr f z mt) mts
+  foldl f z (Leaf x) = f z x
+  foldl f z (Branch xs) = go f z xs
+    where
+      go :: (b -> a -> b) -> b -> [Tree a] -> b
+      go f z [] = z
+      go f z (mt:mts) = go f (Data.Foldable.foldl f z mt) mts
 
 -- useful tree functions
 
-unMaybeTree :: forall a. Tree (Maybe a) -> Maybe (Tree a)
-unMaybeTree (Leaf Nothing) = Nothing
-unMaybeTree (Leaf (Just y)) = Just $ Leaf y
-unMaybeTree (Branch xs) = case allJust (map unMaybeTree xs) of
-      Nothing -> Nothing
-      Just xs -> Just $ Branch xs 
-
-maybeTree :: forall a b. (a -> Maybe b) -> Tree a -> Maybe (Tree b)
-maybeTree = undefined
+-- unMaybeTree :: forall a. Tree (Maybe a) -> Maybe (Tree a)
+-- unMaybeTree (Leaf Nothing) = Nothing
+-- unMaybeTree (Leaf (Just y)) = Just $ Leaf y
+-- unMaybeTree (Branch xs) = case allJust (map unMaybeTree xs) of
+--       Nothing -> Nothing
+--       Just xs -> Just $ Branch xs 
+-- 
+-- maybeTree :: forall a b. (a -> Maybe b) -> Tree a -> Maybe (Tree b)
+-- maybeTree = undefined
 
 
 -- parse
@@ -119,7 +133,7 @@ parse ts = case go ts 0 [] of
 
 unparse :: Tree String -> [String]
 unparse (Leaf a) = [a]
-unparse (Branch xs) = ["("] ++ (foldl' (++) [] (map unparse xs)) ++ [")"]
+unparse (Branch xs) = ["("] ++ (Data.List.foldl' (++) [] (map unparse xs)) ++ [")"]
 
 
 -- untokenize

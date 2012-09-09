@@ -1,6 +1,8 @@
 #!/usr/bin/env runhaskell
 {-# LANGUAGE MultiParamTypeClasses, ExistentialQuantification #-}
 
+import qualified Data.Foldable
+
 import Debug.Trace
 import Test.Hspec.Monadic
 import Test.Hspec.QuickCheck
@@ -77,6 +79,19 @@ treeFmapCases = map (appBoth $ unJust . parse . tokenize) [
             , ("((a b) (c d))", "((aa bb) (cc dd))")
             ]
 
+treeFoldrCases :: [(Tree String, String)]
+treeFoldrCases = map (appFirst $ unJust . parse . tokenize) [
+              ("(abc)", "(abc+.)")
+            , ("((a b) (c d))", "(a+(b+(c+(d+.))))")
+            ]
+
+treeFoldlCases :: [(Tree String, String)]
+treeFoldlCases = map (appFirst $ unJust . parse . tokenize) [
+              ("(abc)", "(.+abc)")
+            , ("((a b) (c d))", "((((.+a)+b)+c)+d)")
+            ]
+
+
 hparseSpecs = describe "HParse" $ do
   it "tokenize" $ runCases tokenize tokenizeCases
   it "isBalanced" $ runCases isBalanced isBalancedCases
@@ -84,5 +99,7 @@ hparseSpecs = describe "HParse" $ do
   it "unparse" $ runCases unparse unparseCases
   it "untokenize" $ runCases untokenize untokenizeCases
   it "tree fmap" $ runCases (fmap (\x -> x ++ x)) treeFmapCases
+  it "tree foldr" $ runCases (Data.Foldable.foldr (\x y -> "(" ++ x ++ "+" ++ y ++ ")") ".") treeFoldrCases
+  it "tree foldl" $ runCases (Data.Foldable.foldl (\x y -> "(" ++ x ++ "+" ++ y ++ ")") ".") treeFoldlCases
 
 
