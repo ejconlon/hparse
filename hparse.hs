@@ -1,6 +1,6 @@
 #!/usr/bin/env runhaskell
 
-{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE MultiParamTypeClasses, ExistentialQuantification #-}
 
 import Test.Hspec.Monadic
 import Test.Hspec.QuickCheck
@@ -50,7 +50,8 @@ instance Case (TokenizeCase) where
   runCase (TokenizeCase (c, rs)) = (tokenize c) == rs
 
 tokenizeCases :: [TokenizeCase]
-tokenizeCases = map TokenizeCase [ ("()", ["(", ")"])
+tokenizeCases = map TokenizeCase [
+              ("()", ["(", ")"])
             , ("(a b c)", ["(", "a", "b", "c", ")"])
             , ("(a \tb)", ["(", "a", "b", ")"])
             , ("( )(\n) ()", ["(", ")", "(", ")", "(", ")"])
@@ -70,14 +71,65 @@ data IsBalancedCase = IsBalancedCase ([String], Bool)
 instance Case (IsBalancedCase) where
   runCase (IsBalancedCase (ts, r)) = (isBalanced ts) == r
 
+appFirst :: forall x y b. (x -> y) -> (x, b) -> (y, b)
+appFirst f (a, b) = (f a, b)
+
+appSecond :: forall x y a. (x -> y) -> (a, x) -> (a, y)
+appSecond f (a, b) = (a, f b)
+
 isBalancedCases :: [IsBalancedCase]
-isBalancedCases = map IsBalancedCase [ (tokenize "()", True)
-              , (tokenize "(()())", True)
-              , (tokenize "(()", False)
-              , (tokenize ")", False)
+isBalancedCases = map (IsBalancedCase . appFirst tokenize) [
+                ("()", True)
+              , ("(()())", True)
+              , ("(()", False)
+              , (")", False)
               ]
+
+data Tree a = Leaf a | Branch [Tree a] deriving (Show, Eq)
+
+allJust :: forall a. [Maybe a] -> Maybe [a]
+allJust xs = go xs []
+  where
+    go :: [Maybe a] -> [a] -> Maybe [a]
+    go [] [] = Nothing  -- no Just [] in the end
+    go [] as = Just as
+    go (Nothing:xs) _ = Nothing
+    go ((Just a):xs) as = go xs (a:as)
+
+unrecurse :: forall a. Tree (Maybe a) -> Maybe (Tree a)
+unrecurse (Leaf Nothing) = Nothing
+unrecurse (Leaf (Just y)) = Just $ Leaf y
+unrecurse (Branch xs) = treeified
+  where
+    applied :: [Maybe (Tree a)]
+    applied = map unrecurse xs
+   
+    allJustApplied :: Maybe [Tree a]
+    allJustApplied = allJust applied
+
+    treeified :: Maybe (Tree a)
+    treeified = case allJustApplied of
+      Nothing -> Nothing
+      Just xs -> Just $ Branch xs 
+
+parse :: [String] -> Maybe (Tree String)
+parse ts = go ts
+  where
+    go :: [String] -> Maybe (Tree String)
+    go _ = Nothing
+
+
+data ParseCase = ParseCase ([String], Maybe (Tree String))
+instance Case (ParseCase) where
+  runCase (ParseCase (ts, mb)) = (parse ts) == mb
+
+parseCases :: [ParseCase]
+parseCases = map (ParseCase . appFirst tokenize) [
+            ("(a)", Just $ Branch [Leaf "a"])
+          ]
 
 mySpecs = describe "stuff" $ do
   it "tokenize" $ runCases tokenizeCases
   it "isBalanced" $ runCases isBalancedCases
+  it "parse" $ runCases parseCases
 
