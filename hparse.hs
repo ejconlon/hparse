@@ -88,6 +88,11 @@ isBalancedCases = map (appFirst tokenize) [
 
 data Tree a = Leaf a | Branch [Tree a] deriving (Show, Eq)
 
+instance Functor Tree where
+  -- fmap :: (a -> b) -> Tree a -> Tree b
+  fmap f (Leaf x) = Leaf $ f x
+  fmap f (Branch xs) = Branch $ map (fmap f) xs
+
 allJust :: forall a. [Maybe a] -> Maybe [a]
 allJust xs = go xs []
   where
@@ -103,6 +108,9 @@ unMaybeTree (Leaf (Just y)) = Just $ Leaf y
 unMaybeTree (Branch xs) = case allJust (map unMaybeTree xs) of
       Nothing -> Nothing
       Just xs -> Just $ Branch xs 
+
+maybeTree :: forall a b. (a -> Maybe b) -> Tree a -> Maybe (Tree b)
+maybeTree = undefined
 
 parse :: [String] -> Maybe (Tree String)
 parse ts = case go ts 0 [] of
