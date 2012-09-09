@@ -88,21 +88,21 @@ isBalancedCases = map (appFirst tokenize) [
 
 data Tree a = Leaf a | Branch [Tree a] deriving (Show, Eq)
 
--- allJust :: forall a. [Maybe a] -> Maybe [a]
--- allJust xs = go xs []
---   where
---     go :: [Maybe a] -> [a] -> Maybe [a]
---     go [] [] = Nothing  -- no Just [] in the end
---     go [] as = Just as
---     go (Nothing:xs) _ = Nothing
---     go ((Just a):xs) as = go xs (a:as)
--- 
--- unMaybeTree :: forall a. Tree (Maybe a) -> Maybe (Tree a)
--- unMaybeTree (Leaf Nothing) = Nothing
--- unMaybeTree (Leaf (Just y)) = Just $ Leaf y
--- unMaybeTree (Branch xs) = case allJust (map unMaybeTree xs) of
---       Nothing -> Nothing
---       Just xs -> Just $ Branch xs 
+allJust :: forall a. [Maybe a] -> Maybe [a]
+allJust xs = go xs []
+  where
+    go :: [Maybe a] -> [a] -> Maybe [a]
+    go [] [] = Nothing  -- no Just [] in the end
+    go [] as = Just as
+    go (Nothing:xs) _ = Nothing
+    go ((Just a):xs) as = go xs (a:as)
+
+unMaybeTree :: forall a. Tree (Maybe a) -> Maybe (Tree a)
+unMaybeTree (Leaf Nothing) = Nothing
+unMaybeTree (Leaf (Just y)) = Just $ Leaf y
+unMaybeTree (Branch xs) = case allJust (map unMaybeTree xs) of
+      Nothing -> Nothing
+      Just xs -> Just $ Branch xs 
 
 parse :: [String] -> Maybe (Tree String)
 parse ts = case go ts 0 [] of
