@@ -15,10 +15,11 @@ traceEq :: forall a. (Show a, Eq a) => a -> a -> Bool
 traceEq x y | x == y = True
             | otherwise = trace ("T1. " ++ (show x)) $ trace ("T2. " ++ (show y)) $ False
 
-class Case a where
-  runCase :: a -> Bool
-  runCases :: [a] -> Bool
-  runCases cs = all id $ map runCase cs
+runCase :: forall a b. (Show b, Eq b) => (a -> b) -> a -> b -> Bool
+runCase f x y = traceEq (f x) y
+
+runCases :: forall a b. (Show b, Eq b) => (a -> b) -> [(a, b)] -> Bool
+runCases f cs = all id $ map (\(x, y) -> runCase f x y) cs
 
 tokenize :: String -> [String]
 tokenize s = reverse $ go s Nothing []
@@ -49,13 +50,10 @@ tokenize s = reverse $ go s Nothing []
                        | otherwise =  go s (Just $ optAppendC c mt) ts
         go [] mt ts = optAppendS mt ts
 
-data TokenizeCase = TokenizeCase (String, [String])
-
-instance Case (TokenizeCase) where
-  runCase (TokenizeCase (c, rs)) = traceEq (tokenize c) rs
+type TokenizeCase = (String, [String])
 
 tokenizeCases :: [TokenizeCase]
-tokenizeCases = map TokenizeCase [
+tokenizeCases = [
               ("()", ["(", ")"])
             , ("(abc)", ["(", "abc", ")"])
             , ("(a b c)", ["(", "a", "b", "c", ")"])
@@ -72,10 +70,7 @@ isBalanced (t:ts) = (t == "(") && (go 1 ts)
         go 0 [] = True
         go _ _ = False
 
-data IsBalancedCase = IsBalancedCase ([String], Bool)
-
-instance Case (IsBalancedCase) where
-  runCase (IsBalancedCase (ts, r)) = traceEq (isBalanced ts) r
+type IsBalancedCase = ([String], Bool)
 
 appFirst :: forall x y b. (x -> y) -> (x, b) -> (y, b)
 appFirst f (a, b) = (f a, b)
@@ -84,7 +79,7 @@ appSecond :: forall x y a. (x -> y) -> (a, x) -> (a, y)
 appSecond f (a, b) = (a, f b)
 
 isBalancedCases :: [IsBalancedCase]
-isBalancedCases = map (IsBalancedCase . appFirst tokenize) [
+isBalancedCases = map (appFirst tokenize) [
                 ("()", True)
               , ("(()())", True)
               , ("(()", False)
@@ -126,12 +121,10 @@ parse ts = case go ts 0 [] of
       Nothing -> Nothing
     go (y:ys) i mts = go ys i ((Leaf y):mts)
 
-data ParseCase = ParseCase ([String], Maybe (Tree String))
-instance Case (ParseCase) where
-  runCase (ParseCase (ts, mb)) = traceEq (parse ts) mb
+type ParseCase = ([String], Maybe (Tree String))
 
 parseCases :: [ParseCase]
-parseCases = map (ParseCase . appFirst tokenize) [
+parseCases = map (appFirst tokenize) [
             ("(a)", Just $ Branch [Leaf "a"])
           , ("(abc)", Just $ Branch [Leaf "abc"])
           , ("((a))", Just $ Branch [Branch [Leaf "a"]])
@@ -144,7 +137,7 @@ parseCases = map (ParseCase . appFirst tokenize) [
           ]
 
 mySpecs = describe "stuff" $ do
-  it "tokenize" $ runCases tokenizeCases
-  it "isBalanced" $ runCases isBalancedCases
-  it "parse" $ runCases parseCases
+  it "tokenize" $ runCases tokenize tokenizeCases
+  it "isBalanced" $ runCases isBalanced isBalancedCases
+  it "parse" $ runCases parse parseCases
 
