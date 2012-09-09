@@ -55,9 +55,34 @@ parseCases = map (appFirst tokenize) [
           , ("((a (b c)) ((d e) f))", Just $ Branch [Branch [Leaf "a", Branch [Leaf "b", Leaf "c"]], Branch [Branch [Leaf "d", Leaf "e"], Leaf "f"]])
           ]
 
+-- ugh
+unJust :: forall a. (Show a) => Maybe a -> a
+unJust (Just x) = x
+unJust m = error "Some example is wrong"
+
+expressions :: [String]
+expressions = ["(a)", "(abc)", "(a b c)", "((a))", "((a) b)",
+               "(a (b))", "(a (b c))", "((a b) (c d))"]
+
+unparseCases :: [(Tree String, [String])]
+unparseCases = map ((appFirst $ unJust . parse) . dup . tokenize) expressions
+
+untokenizeCases :: [([String], String)]
+untokenizeCases = map ((appFirst $ unparse . unJust . parse . tokenize) . dup) expressions
+
+treeFmapCases :: [(Tree String, Tree String)]
+treeFmapCases = map (appBoth $ unJust . parse . tokenize) [
+              ("(a)", "(aa)")
+            , ("(abc)", "(abcabc)")
+            , ("((a b) (c d))", "((aa bb) (cc dd))")
+            ]
 
 hparseSpecs = describe "HParse" $ do
   it "tokenize" $ runCases tokenize tokenizeCases
   it "isBalanced" $ runCases isBalanced isBalancedCases
   it "parse" $ runCases parse parseCases
+  it "unparse" $ runCases unparse unparseCases
+  it "untokenize" $ runCases untokenize untokenizeCases
+  it "tree fmap" $ runCases (fmap (\x -> x ++ x)) treeFmapCases
+
 

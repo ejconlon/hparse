@@ -2,6 +2,8 @@
 
 module HParse where
 
+import Data.List
+
 -- Miscellaneous helpers
 
 appFirst :: forall x y b. (x -> y) -> (x, b) -> (y, b)
@@ -9,6 +11,12 @@ appFirst f (a, b) = (f a, b)
 
 appSecond :: forall x y a. (x -> y) -> (a, x) -> (a, y)
 appSecond f (a, b) = (a, f b)
+
+appBoth :: forall x y. (x -> y) -> (x, x) -> (y, y)
+appBoth f (a, b) = (f a, f b)
+
+dup :: forall a. a -> (a, a)
+dup x = (x, x)
 
 allJust :: forall a. [Maybe a] -> Maybe [a]
 allJust xs = go xs []
@@ -105,4 +113,27 @@ parse ts = case go ts 0 [] of
       Just (xs, mts2) -> go xs i ((Branch $ reverse $ mts2):mts)
       Nothing -> Nothing
     go (y:ys) i mts = go ys i ((Leaf y):mts)
+
+
+-- unparse
+
+unparse :: Tree String -> [String]
+unparse (Leaf a) = [a]
+unparse (Branch xs) = ["("] ++ (foldl' (++) [] (map unparse xs)) ++ [")"]
+
+
+-- untokenize
+
+untokenize :: [String] -> String
+untokenize ts = go ts False ""
+  where
+    go :: [String] -> Bool -> String -> String
+    go [] _ s = s
+    go ("(":ts) True s = go ts False (s ++ " (")
+    go ("(":ts) False s = go ts False (s ++ "(")
+    go (")":ts) _ s = go ts True (s ++ ")")
+    go (t:ts) True s = go ts True (s ++ " " ++ t)
+    go (t:ts) False s = go ts True (s ++ t)
+
+
 
