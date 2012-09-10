@@ -125,6 +125,11 @@ missingRefsCases = map ((appFirst $ map (unJust . parseGrammar . unJust . parse 
              , (["(production a (b a))"], ["b"])  -- self ref ok
              ]
 
+validateGrammarCases :: [([Grammar String], [String])]
+validateGrammarCases = map (appFirst $ map (unJust . parseGrammar . unJust . parse . tokenize)) [
+               (["(production a (b c))"], ["Missing ref: \"b\"", "Missing ref: \"c\""])
+             ]
+
 hparseSpecs = describe "HParse" $ do
   it "tokenize" $ runCases tokenize tokenizeCases
   it "isBalanced" $ runCases isBalanced isBalancedCases
@@ -138,4 +143,6 @@ hparseSpecs = describe "HParse" $ do
   it "declarations" $ runCases declarations declarationsCases
   it "references" $ runCases references referencesCases
   it "missingRefs" $ runCases missingRefs missingRefsCases
+  it "validateGrammar" $ runCases validateGrammar validateGrammarCases
+
 

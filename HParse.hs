@@ -205,22 +205,36 @@ parseGrammarFunctions = [makeProduction "production", makeTerminal "terminal", m
 parseGrammar :: GrammarFunction String
 parseGrammar = mergeGrammarFunctions parseGrammarFunctions
 
-declarations :: Ord a => Grammar a -> Data.Set.Set a
+declarations :: forall a. Ord a => Grammar a -> Data.Set.Set a
 declarations (Combinator name _) = Data.Set.singleton name
 declarations (Terminal name) = Data.Set.singleton name
 declarations (Production name _) = Data.Set.singleton name
 
-references :: Ord a => Grammar a -> Data.Set.Set a
+references :: forall a. Ord a => Grammar a -> Data.Set.Set a
 references (Production name produced) = Data.Foldable.foldl Data.Set.union (Data.Set.empty) (fmap Data.Set.singleton produced)
 references _ = Data.Set.empty
 
-missingRefs :: [Grammar String] -> Data.Set.Set String
+gcollect :: forall a. Ord a => (Grammar a -> Data.Set.Set a) -> [Grammar a] -> Data.Set.Set a
+gcollect f gs = Data.List.foldl' Data.Set.union Data.Set.empty (map f gs)
+
+missingRefs :: forall a. Ord a => [Grammar a] -> Data.Set.Set a
 missingRefs gs = Data.Set.difference refs decls
   where
     decls = gcollect declarations gs
     refs = gcollect references gs
 
-gcollect :: Ord a => (Grammar a -> Data.Set.Set a) -> [Grammar a] -> Data.Set.Set a
-gcollect f gs = Data.List.foldl' Data.Set.union Data.Set.empty (map f gs)
+type GrammarValidator a = [Grammar a] -> [String] 
+
+validateMissingRefs :: (Ord a, Show a) => GrammarValidator a
+validateMissingRefs gs = merrs
+  where
+    mrefs = missingRefs gs
+    merrs = map (\x -> "Missing ref: " ++ (show x)) (Data.Set.toList mrefs)
+
+validateGrammar :: (Ord a, Show a) => GrammarValidator a
+validateGrammar = validateMissingRefs -- for now
+
+
+
 
 
