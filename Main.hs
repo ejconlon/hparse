@@ -91,6 +91,13 @@ treeFoldlCases = map (appFirst $ unJust . parse . tokenize) [
             , ("((a b) (c d))", "((((.+a)+b)+c)+d)")
             ]
 
+parseGrammarCases :: [(Tree String, Maybe (Grammar String))]
+parseGrammarCases = map (appFirst $ unJust . parse . tokenize) [
+              ("(production a b)", Just (Production "a" (Leaf "b")))
+            , ("(production a (b c))", Just (Production "a" (Branch [Leaf "b", Leaf "c"])))
+            , ("(terminal x)", Just $ Terminal "x")
+            , ("(combinator x (a b))", Just $ Combinator "x" ["a", "b"])
+            ]
 
 hparseSpecs = describe "HParse" $ do
   it "tokenize" $ runCases tokenize tokenizeCases
@@ -101,5 +108,6 @@ hparseSpecs = describe "HParse" $ do
   it "tree fmap" $ runCases (fmap (\x -> x ++ x)) treeFmapCases
   it "tree foldr" $ runCases (Data.Foldable.foldr (\x y -> "(" ++ x ++ "+" ++ y ++ ")") ".") treeFoldrCases
   it "tree foldl" $ runCases (Data.Foldable.foldl (\x y -> "(" ++ x ++ "+" ++ y ++ ")") ".") treeFoldlCases
+  it "parseGrammar" $ runCases parseGrammar parseGrammarCases
 
 

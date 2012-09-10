@@ -150,4 +150,57 @@ untokenize ts = go ts False ""
     go (t:ts) False s = go ts True (s ++ t)
 
 
+-- Grammar!
+
+data Grammar a = Combinator a [a] | Terminal a | Production a (Tree a) deriving (Show, Eq)
+
+type GrammarFunction a = Tree a -> Maybe (Grammar a)
+
+makeProduction :: forall a. (Eq a) => a -> GrammarFunction a 
+makeProduction ident = go
+  where
+    go (Branch [Leaf mident, Leaf name, produced]) | mident == ident = Just $ Production name produced
+    go _ = Nothing
+
+makeTerminal :: forall a. (Eq a) => a -> GrammarFunction a 
+makeTerminal ident = go
+  where
+    go (Branch [Leaf mident, Leaf name]) | mident == ident = Just $ Terminal name
+    go _ = Nothing
+
+makeCombinator :: forall a. (Eq a) => a -> GrammarFunction a
+makeCombinator ident = go
+  where
+    go (Branch [Leaf mident, Leaf name, Branch xs]) | mident == ident = check name (go2 xs)
+    go _ = Nothing
+    go2 [] = (True, [])
+    go2 ((Leaf y):xs) = case go2 xs of
+      (True, ys) -> (True, y:ys)
+      (False, _) -> (False, [])
+    go2 _ = (False, [])
+    check name (True, ys) = Just $ Combinator name ys
+    check _ _ = Nothing
+
+-- maybeToList :: forall a. Maybe a -> [a]
+-- maybeToList (Just x) = [x]
+-- maybeToList _ = []
+-- 
+-- maybeOr :: forall a. Maybe a -> Maybe a -> Maybe a
+-- maybeOr Nothing y = y
+-- maybeOr x _ = x
+
+maybeOrList :: [Maybe a] -> Maybe a
+maybeOrList [] = Nothing
+maybeOrList (Nothing:xs) = maybeOrList xs
+maybeOrList (x:_) = x
+
+mergeGrammarFunctions :: [GrammarFunction String] -> GrammarFunction String
+mergeGrammarFunctions fs = \x -> maybeOrList (map (\f -> f x) fs) 
+
+parseGrammarFunctions :: [GrammarFunction String]
+parseGrammarFunctions = [makeProduction "production", makeTerminal "terminal", makeCombinator "combinator"]
+
+parseGrammar :: GrammarFunction String
+parseGrammar = mergeGrammarFunctions parseGrammarFunctions
+
 
