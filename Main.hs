@@ -2,6 +2,7 @@
 {-# LANGUAGE MultiParamTypeClasses, ExistentialQuantification #-}
 
 import qualified Data.Foldable
+import qualified Data.Set
 
 import Debug.Trace
 import Test.Hspec.Monadic
@@ -99,6 +100,31 @@ parseGrammarCases = map (appFirst $ unJust . parse . tokenize) [
             , ("(combinator x (a b))", Just $ Combinator "x" ["a", "b"])
             ]
 
+declarationsCases :: [(Grammar String, Data.Set.Set String)]
+declarationsCases = map ((appFirst $ unJust . parseGrammar . unJust . parse . tokenize) . (appSecond $ Data.Set.fromList)) [
+              ("(terminal x)", ["x"])
+            , ("(combinator a (b c))", ["a"])
+            , ("(production a (b c))", ["a"])
+            ]
+
+referencesCases :: [(Grammar String, Data.Set.Set String)]
+referencesCases = map ((appFirst $ unJust . parseGrammar . unJust . parse . tokenize) . (appSecond $ Data.Set.fromList)) [
+              ("(terminal x)", [])
+            , ("(combinator a (b c))", [])
+            , ("(production a (b c))", ["b", "c"])
+            ]
+
+missingRefsCases :: [([Grammar String], Data.Set.Set String)]
+missingRefsCases = map ((appFirst $ map (unJust . parseGrammar . unJust . parse . tokenize)) . (appSecond $ Data.Set.fromList)) [
+               (["(terminal x)"], [])
+             , (["(combinator a (b c))"], [])
+             , (["(production a (b c))"], ["b", "c"])
+             , (["(combinator b (d))", "(terminal c)", "(production a (b c))"], [])
+             , (["(terminal c)", "(production a (b c))"], ["b"])
+             , (["(combinator b (d))", "(production a (b c))"], ["c"])
+             , (["(production a (b a))"], ["b"])  -- self ref ok
+             ]
+
 hparseSpecs = describe "HParse" $ do
   it "tokenize" $ runCases tokenize tokenizeCases
   it "isBalanced" $ runCases isBalanced isBalancedCases
@@ -109,5 +135,7 @@ hparseSpecs = describe "HParse" $ do
   it "tree foldr" $ runCases (Data.Foldable.foldr (\x y -> "(" ++ x ++ "+" ++ y ++ ")") ".") treeFoldrCases
   it "tree foldl" $ runCases (Data.Foldable.foldl (\x y -> "(" ++ x ++ "+" ++ y ++ ")") ".") treeFoldlCases
   it "parseGrammar" $ runCases parseGrammar parseGrammarCases
-
+  it "declarations" $ runCases declarations declarationsCases
+  it "references" $ runCases references referencesCases
+  it "missingRefs" $ runCases missingRefs missingRefsCases
 

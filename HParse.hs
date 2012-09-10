@@ -2,8 +2,10 @@
 
 module HParse where
 
+import qualified Debug.Trace
 import qualified Data.Foldable
 import qualified Data.List
+import qualified Data.Set
 
 -- Miscellaneous helpers
 
@@ -202,5 +204,23 @@ parseGrammarFunctions = [makeProduction "production", makeTerminal "terminal", m
 
 parseGrammar :: GrammarFunction String
 parseGrammar = mergeGrammarFunctions parseGrammarFunctions
+
+declarations :: Ord a => Grammar a -> Data.Set.Set a
+declarations (Combinator name _) = Data.Set.singleton name
+declarations (Terminal name) = Data.Set.singleton name
+declarations (Production name _) = Data.Set.singleton name
+
+references :: Ord a => Grammar a -> Data.Set.Set a
+references (Production name produced) = Data.Foldable.foldl Data.Set.union (Data.Set.empty) (fmap Data.Set.singleton produced)
+references _ = Data.Set.empty
+
+missingRefs :: [Grammar String] -> Data.Set.Set String
+missingRefs gs = Data.Set.difference refs decls
+  where
+    decls = gcollect declarations gs
+    refs = gcollect references gs
+
+gcollect :: Ord a => (Grammar a -> Data.Set.Set a) -> [Grammar a] -> Data.Set.Set a
+gcollect f gs = Data.List.foldl' Data.Set.union Data.Set.empty (map f gs)
 
 
