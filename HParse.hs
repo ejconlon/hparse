@@ -26,7 +26,7 @@ allJust xs = go xs []
   where
     go :: [Maybe a] -> [a] -> Maybe [a]
     go [] [] = Nothing  -- no Just [] in the end
-    go [] as = Just as
+    go [] as = Just $ reverse as
     go (Nothing:xs) _ = Nothing
     go ((Just a):xs) as = go xs (a:as)
 
@@ -205,17 +205,28 @@ parseGrammarFunctions = [makeProduction "production", makeTerminal "terminal", m
 parseGrammar :: GrammarFunction String
 parseGrammar = mergeGrammarFunctions parseGrammarFunctions
 
+unionize :: (Ord a, Data.Foldable.Foldable f) => f (Data.Set.Set a) -> Data.Set.Set a
+unionize xs = Data.Foldable.foldl Data.Set.union Data.Set.empty xs
+
 declarations :: forall a. Ord a => Grammar a -> Data.Set.Set a
 declarations (Combinator name _) = Data.Set.singleton name
 declarations (Terminal name) = Data.Set.singleton name
 declarations (Production name _) = Data.Set.singleton name
 
 references :: forall a. Ord a => Grammar a -> Data.Set.Set a
-references (Production name produced) = Data.Foldable.foldl Data.Set.union (Data.Set.empty) (fmap Data.Set.singleton produced)
+references (Production name produced) = unionize (fmap Data.Set.singleton produced)
 references _ = Data.Set.empty
 
-gcollect :: forall a. Ord a => (Grammar a -> Data.Set.Set a) -> [Grammar a] -> Data.Set.Set a
-gcollect f gs = Data.List.foldl' Data.Set.union Data.Set.empty (map f gs)
+terminals :: forall a. Ord a => Grammar a -> Data.Set.Set a
+terminals (Terminal name) = Data.Set.singleton name
+terminals _ = Data.Set.empty
+
+combinators :: forall a. Ord a => Grammar a -> Data.Set.Set (a, Int)
+combinators (Combinator name xs) = Data.Set.singleton (name, length xs)
+combinators _ = Data.Set.empty
+
+gcollect :: forall a b. Ord b => (Grammar a -> Data.Set.Set b) -> [Grammar a] -> Data.Set.Set b
+gcollect f gs = unionize (map f gs)
 
 missingRefs :: forall a. Ord a => [Grammar a] -> Data.Set.Set a
 missingRefs gs = Data.Set.difference refs decls

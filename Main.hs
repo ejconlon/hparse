@@ -1,10 +1,11 @@
 #!/usr/bin/env runhaskell
 {-# LANGUAGE MultiParamTypeClasses, ExistentialQuantification #-}
 
+module Main where
+
 import qualified Data.Foldable
 import qualified Data.Set
 
-import Debug.Trace
 import Test.Hspec.Monadic
 import Test.Hspec.QuickCheck
 import Test.Hspec.HUnit ()
@@ -12,19 +13,9 @@ import Test.QuickCheck
 import Test.HUnit
 
 import HParse
+import Cases
 
 main = hspec hparseSpecs
-
-traceEq :: forall a. (Show a, Eq a) => a -> a -> Bool
-traceEq x y | x == y = True
-            | otherwise = trace ("T1. " ++ (show x)) $ trace ("T2. " ++ (show y)) $ False
-
-runCase :: forall a b. (Show b, Eq b) => (a -> b) -> a -> b -> Bool
-runCase f x y = traceEq (f x) y
-
-runCases :: forall a b. (Show b, Eq b) => (a -> b) -> [(a, b)] -> Bool
-runCases f cs = all id $ map (\(x, y) -> runCase f x y) cs
-
 
 tokenizeCases :: [(String, [String])]
 tokenizeCases = [
