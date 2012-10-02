@@ -43,16 +43,16 @@ main = do
   putStrLn $ show $ partGrammar
   putStrLn ""
   putStrLn "Declarations:"
-  putStrLn $ show $ fmap (gcollect declarations) partGrammar
+  putStrLn $ show $ fmap (collectMap declarations) partGrammar
   putStrLn ""
   putStrLn "References:"
-  putStrLn $ show $ fmap (gcollect references) partGrammar
+  putStrLn $ show $ fmap (collectMap references) partGrammar
   putStrLn ""
   putStrLn "Terminals:"
-  putStrLn $ show $ fmap (gcollect terminals) partGrammar
+  putStrLn $ show $ fmap (collectMap terminals) partGrammar
   putStrLn ""
   putStrLn "Combinators:"
-  putStrLn $ show $ fmap (gcollect combinators) partGrammar
+  putStrLn $ show $ fmap (collectMap combinators) partGrammar
   putStrLn ""
   putStrLn "Errors:"
   putStrLn $ show $ fmap (validateGrammar) partGrammar

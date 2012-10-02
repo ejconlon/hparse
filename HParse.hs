@@ -6,6 +6,7 @@ import qualified Debug.Trace
 import qualified Data.Foldable
 import qualified Data.List
 import qualified Data.Set
+import qualified Data.Monoid
 
 -- Miscellaneous helpers
 
@@ -205,16 +206,13 @@ parseGrammarFunctions = [makeProduction "production", makeTerminal "terminal", m
 parseGrammar :: GrammarFunction String
 parseGrammar = mergeGrammarFunctions parseGrammarFunctions
 
-unionize :: (Ord a, Data.Foldable.Foldable f) => f (Data.Set.Set a) -> Data.Set.Set a
-unionize xs = Data.Foldable.foldl Data.Set.union Data.Set.empty xs
-
 declarations :: forall a. Ord a => Grammar a -> Data.Set.Set a
 declarations (Combinator name _) = Data.Set.singleton name
 declarations (Terminal name) = Data.Set.singleton name
 declarations (Production name _) = Data.Set.singleton name
 
 references :: forall a. Ord a => Grammar a -> Data.Set.Set a
-references (Production name produced) = unionize (fmap Data.Set.singleton produced)
+references (Production name produced) = collectMap Data.Set.singleton produced
 references _ = Data.Set.empty
 
 terminals :: forall a. Ord a => Grammar a -> Data.Set.Set a
@@ -225,14 +223,14 @@ combinators :: forall a. Ord a => Grammar a -> Data.Set.Set (a, Int)
 combinators (Combinator name xs) = Data.Set.singleton (name, length xs)
 combinators _ = Data.Set.empty
 
-gcollect :: forall a b. Ord b => (Grammar a -> Data.Set.Set b) -> [Grammar a] -> Data.Set.Set b
-gcollect f gs = unionize (map f gs)
+collectMap :: forall a b f. (Functor f, Data.Foldable.Foldable f, Data.Monoid.Monoid b) => (a -> b) -> f a -> b
+collectMap f gs = Data.Foldable.foldl Data.Monoid.mappend Data.Monoid.mempty (fmap f gs)
 
 missingRefs :: forall a. Ord a => [Grammar a] -> Data.Set.Set a
 missingRefs gs = Data.Set.difference refs decls
   where
-    decls = gcollect declarations gs
-    refs = gcollect references gs
+    decls = collectMap declarations gs
+    refs = collectMap references gs
 
 type GrammarValidator a = [Grammar a] -> [String] 
 
@@ -242,8 +240,15 @@ validateMissingRefs gs = merrs
     mrefs = missingRefs gs
     merrs = map (\x -> "Missing ref: " ++ (show x)) (Data.Set.toList mrefs)
 
+validateCombinatorArity :: (Eq a, Show a) => GrammarValidator a
+validateCombinatorArity _ = []  -- TODO
+
+listApp :: [a -> [b]] -> (a -> [b])
+listApp [] = const []
+listApp (f:fs) = (\x -> f x ++ ((listApp fs) x))
+
 validateGrammar :: (Ord a, Show a) => GrammarValidator a
-validateGrammar = validateMissingRefs -- for now
+validateGrammar = listApp [validateMissingRefs, validateCombinatorArity] -- for now
 
 
 
