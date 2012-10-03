@@ -27,17 +27,6 @@ parts = [
   , "(production object (lcurly (maybe pairlist) rcurly))"
   ]
 
-readGrammarString :: String -> Maybe [Grammar String]
-readGrammarString s = readGrammarArray (lines s)
-
-readGrammarArray :: [String] -> Maybe [Grammar String]
-readGrammarArray ss = parsed
-  where
-    tokenized = map tokenize ss
-    maybePt = map parse tokenized
-    allJustPt = allJust maybePt
-    parsed = (fmap (map parseGrammar) allJustPt) >>= allJust
-
 partGrammar = readGrammarString (unlines parts)
 
 main = do

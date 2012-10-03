@@ -250,7 +250,16 @@ listApp (f:fs) = (\x -> f x ++ ((listApp fs) x))
 validateGrammar :: (Ord a, Show a) => GrammarValidator a
 validateGrammar = listApp [validateMissingRefs, validateCombinatorArity] -- for now
 
+readGrammarString :: String -> Maybe [Grammar String]
+readGrammarString s = readGrammarArray (lines s)
 
+readGrammarArray :: [String] -> Maybe [Grammar String]
+readGrammarArray ss = parsed
+  where
+    tokenized = map tokenize ss
+    maybePt = map parse tokenized
+    allJustPt = allJust maybePt
+    parsed = (fmap (map parseGrammar) allJustPt) >>= allJust
 
 
 
