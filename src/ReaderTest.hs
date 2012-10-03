@@ -46,6 +46,6 @@ runAssertion [] = print "ok"
 runAssertion xs = print (foldl (\x y -> x ++ ", " ++ y) "FAIL: " xs)
 
 runJsonSimple :: IO ()
-runJsonSimple = readFile "jsonsimple.gram" >>= (\x -> return $ checkGrammar $ readJsonSimple x) >>= runAssertion
+runJsonSimple = readFile "../data/jsonsimple.gram" >>= (\x -> return $ checkGrammar $ readJsonSimple x) >>= runAssertion
 
 main = runJsonSimple
